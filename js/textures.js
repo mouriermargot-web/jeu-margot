@@ -395,6 +395,51 @@ const TEX = (() => {
     mats.fabricR = std(t.fabricR, { roughness: 1 });
     mats.fabricG = std(t.fabricG, { roughness: 1 });
     mats.metal = std(t.metal, { roughness: 0.6, metalness: 0.5 });
+    // --- Textures photo (Poly Haven, CC0) : remplacent les textures dessinées quand elles sont disponibles ---
+    if (typeof ASSETS !== 'undefined') {
+      const ptex = (key, srgb) => {
+        if (!ASSETS[key]) return null;
+        const img = new Image(); const tx = new THREE.Texture(img);
+        tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.anisotropy = 8;
+        if (srgb) tx.colorSpace = THREE.SRGBColorSpace;
+        img.onload = () => { tx.needsUpdate = true; };
+        img.src = ASSETS[key];
+        return tx;
+      };
+      const photo = (name, o = {}) => {
+        const map = ptex(name + '_diff', true), nor = ptex(name + '_nor', false);
+        const rep = o.rep || 1; delete o.rep;
+        if (rep !== 1) { map.repeat.set(rep, rep); if (nor) nor.repeat.set(rep, rep); }
+        const m = new THREE.MeshStandardMaterial(Object.assign({ map, roughness: 0.9, metalness: 0 }, o));
+        if (nor) { m.normalMap = nor; m.normalScale = new THREE.Vector2(o.ns || 1, o.ns || 1); }
+        if (o.gain) m.color.multiplyScalar(o.gain);
+        return m;
+      };
+      mats.wall = {
+        '.': photo('wallpaper', { color: 0xd0c4a8 }),
+        '_': photo('redwall', { color: 0xb08880 }),
+        ',': photo('tilewall', { color: 0xc8c4b8, roughness: 0.45, rep: 2 }),
+        ':': photo('stonewall', { color: 0xb0a898, ns: 1.6 }),
+        ';': photo('plankwall', { color: 0xa09080 }),
+        'b': photo('peeling', { color: 0xa8b4b0 }),
+      };
+      mats.floor = {
+        '.': photo('woodfloor', { gain: 1.9, color: 0xc8b4a4, roughness: 0.6 }),
+        '_': photo('carpet', { gain: 1.7, color: 0xe0a898, roughness: 1 }),
+        ',': photo('checker', { gain: 1.4, color: 0xd8d0c0, roughness: 0.5 }),
+        ':': photo('concrete', { gain: 1.3, color: 0xb0aa9c }),
+        ';': photo('atticfloor', { gain: 1.5, color: 0xc0b0a0 }),
+      };
+      mats.ceil = photo('ceiling', { color: 0xb0a898 });
+      mats.ceilCave = photo('plaster', { color: 0x9a9284 });
+      mats.ceilAttic = photo('roof', { gain: 1.4, color: 0x8a7868 });
+      mats.woodDark = photo('darkwood', { gain: 1.9, color: 0xa88870, roughness: 0.6 });
+      mats.woodRaw = photo('rawwood', { gain: 1.5, color: 0xc8b8a8 });
+      mats.fabricW = photo('sheet', { color: 0xa8a294, roughness: 1 });
+      mats.fabricR = photo('sofa', { color: 0x9a5a5a, roughness: 1 });
+      mats.fabricG = photo('sofa', { color: 0x4a7a4a, roughness: 1 });
+      mats.metal = photo('rust', { color: 0x8a8278, roughness: 0.6, metalness: 0.3 });
+    }
     mats.iron = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5, metalness: 0.8 });
     mats.brass = new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.35, metalness: 0.9 });
     mats.burlap = std(t.burlap, { roughness: 1, bumpScale: 0.03 });

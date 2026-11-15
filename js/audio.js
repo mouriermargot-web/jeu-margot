@@ -118,6 +118,23 @@ const AUDIO = (() => {
         thump(o, t + 0.1, 1);
         break;
       }
+      case 'scream': {
+        const shaper = ctx.createWaveShaper(); const cv = new Float32Array(256);
+        for (let i = 0; i < 256; i++) { const x = i / 128 - 1; cv[i] = Math.tanh(x * 4); } shaper.curve = cv;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1.3, t + 0.02); g.gain.setValueAtTime(1.3, t + 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+        shaper.connect(g); g.connect(o);
+        [520, 547, 780, 1170, 1410].forEach((fr, i) => {
+          const s = ctx.createOscillator(); s.type = 'sawtooth';
+          s.frequency.setValueAtTime(fr * 0.6, t); s.frequency.exponentialRampToValueAtTime(fr * 1.5, t + 0.12); s.frequency.linearRampToValueAtTime(fr * 1.25, t + 1.2);
+          const vib = ctx.createOscillator(); vib.frequency.value = 9 + i * 3; const vg = ctx.createGain(); vg.gain.value = fr * 0.06; vib.connect(vg); vg.connect(s.frequency);
+          const sg = ctx.createGain(); sg.gain.value = 0.22; s.connect(sg); sg.connect(shaper);
+          s.start(t); vib.start(t); s.stop(t + 1.35); vib.stop(t + 1.35);
+        });
+        const n = noiseSrc(); const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 0.8;
+        const ng = ctx.createGain(); env(ng, t, 0.005, 1.2, 0.9); n.connect(f); f.connect(ng); ng.connect(o); n.start(t); n.stop(t + 1.2);
+        thump(o, t, 1.2);
+        break;
+      }
       case 'stairs': for (let i = 0; i < 5; i++) { const n = noiseSrc(); const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 300; const g = ctx.createGain(); env(g, t + i * 0.18, 0.005, 0.3, 0.1); n.connect(f); f.connect(g); g.connect(o); n.start(t + i * 0.18); n.stop(t + i * 0.18 + 0.2); } break;
       case 'creak': creak(o, t, 0.6 + Math.random()); break;
       case 'knock': thump(o, t, 0.7); thump(o, t + 0.35, 0.6); thump(o, t + 0.7, 0.8); break;

@@ -21,7 +21,7 @@ const G = (() => {
 
   /* ===================== Réglages ===================== */
   function loadSettings() {
-    const d = { shadows: true, sens: 1, vol: 0.8, bright: 1, ctrl: ['kbm', 'kb2'], quality: 1 };
+    const d = { shadows: true, sens: 1, vol: 0.8, bright: 1, ctrl: ['kbm', 'kb2'], quality: 1, scares: true };
     try { return Object.assign(d, JSON.parse(localStorage.getItem('valcourt_settings') || '{}')); } catch (e) { return d; }
   }
   function saveSettings() { try { localStorage.setItem('valcourt_settings', JSON.stringify(settings)); } catch (e) { } }
@@ -94,7 +94,7 @@ const G = (() => {
     scene.fog = new THREE.FogExp2(0x000000, 0.085);
     mats = TEX.build();
     MODELS.init(mats);
-    hemi = new THREE.HemisphereLight(0x5a6a8a, 0x100c08, 0.22);
+    hemi = new THREE.HemisphereLight(0x5a6a8a, 0x1a1410, 0.32);
     scene.add(hemi);
     for (let i = 0; i < 7; i++) { const l = new THREE.PointLight(0xffd8a0, 0, 9, 2); scene.add(l); lightPool.push(l); }
     clock = new THREE.Clock();
@@ -109,18 +109,20 @@ const G = (() => {
   function newState() {
     return {
       v: 1, codes: makeCodes(), flags: {}, chapter: 1, doors: {}, taken: {}, pushed: {},
-      inv: [[], []], dumb: [[], []], leverPos: [0, 0, 0, 0], time: 0, catches: 0,
+      riddleDone: {}, inv: [[], []], dumb: [[], []], leverPos: [0, 0, 0, 0], time: 0, catches: 0,
       obj: ['Sortir de cette cellule.', 'Trouver une source de lumière.'],
       players: null, monster: null, twin: {},
     };
   }
   function startGame(state) {
-    S = state;
+    S = state; S.riddleDone = S.riddleDone || {};
     WORLD.build(scene, mats);
     // appliquer l'état aux objets
     WORLD.objects.forEach(o => {
       if (o.type === 'door') {
         if (o.spec.twin) o.locked = true;
+        const sp0 = o.spec;
+        if (!sp0.key && !sp0.codeLock && !sp0.twin && !sp0.cachot && !sp0.locked && (o.x * 7 + o.y * 13 + o.floor * 5) % 5 < 2 && !(S.riddleDone || {})[o.uid]) o.riddle = true;
         const d = S.doors[o.uid]; if (d) { o.open = d.open; o.locked = d.locked; o.swing = d.swing || 1; }
       }
       if (S.taken[o.uid]) o.taken = true;
@@ -131,6 +133,7 @@ const G = (() => {
     objsByFloor = WORLD.floors.map(() => []);
     WORLD.objects.forEach(o => objsByFloor[o.floor].push(o));
     // joueurs
+    P.forEach(q => { scene.remove(q.avatar); scene.remove(q.spot); scene.remove(q.spot.target); });
     P.length = 0;
     for (let i = 0; i < 2; i++) P.push(makePlayer(i));
     if (S.players) S.players.forEach((sp, i) => Object.assign(P[i], sp));
@@ -185,12 +188,13 @@ const G = (() => {
     spot.shadow.camera.near = 0.2; spot.shadow.camera.far = 24;
     spot.shadow.bias = -0.0015;
     scene.add(spot); scene.add(spot.target);
+    const avatar = MODELS.build('kid', { girl: i === 0 }); scene.add(avatar);
     return {
-      idx: i, name: PLAYER_NAMES[i], floor: 0, x: 2.5, z: 2.5, yaw: 0, pitch: 0, cam, spot,
+      idx: i, avatar, name: PLAYER_NAMES[i], floor: 0, x: 2.5, z: 2.5, yaw: 0, pitch: 0, cam, spot,
       crouch: false, stamina: 1, hasLamp: false, lamp: false, battery: 100, spare: 0,
       inv: [], sel: 0, hidden: null, ui: null, msg: '', msgT: 0, objFlash: 4,
       tele: null, down: null, hold: null, inCachot: false, bobT: 0, stepT: 0,
-      target: null, speed: 0, fear: 0, hideSeen: false, lastStairs: -9, wasIn: {},
+      target: null, speed: 0, fear: 0, scare: null, pendingScare: null, scareT: 150 + Math.random() * 200 + i * 60, hideSeen: false, lastStairs: -9, wasIn: {},
     };
   }
 
@@ -319,6 +323,7 @@ const G = (() => {
         if (sp.cachot) { if (!o.locked) return o.open ? 'Fermer la porte' : 'Ouvrir la porte'; return inRect(p, CACHOT) ? 'Forcer la porte (maintenir)' : 'Ouvrir la cellule'; }
         if (sp.twin && o.locked) return 'Pousser les lourdes portes (à deux)';
         if (sp.twin) return null;
+        if (o.riddle && !o.open) return 'Ouvrir (serrure à énigme)';
         if (o.locked) { if (sp.key && api.has(p, sp.key)) return 'Déverrouiller : ' + ITEMS[sp.key].name; if (sp.codeLock) return 'Examiner le cadenas'; return 'Ouvrir (verrouillée)'; }
         return o.open ? 'Fermer la porte' : 'Ouvrir la porte';
       }
@@ -372,7 +377,7 @@ const G = (() => {
         else { p.hasLamp = true; p.lamp = true; p.battery = 70; api.sfx('lamp', p); api.say(p, 'Une lampe torche. Elle marche encore. [' + btnLabel(p, 'lamp') + '] pour l\'allumer ou l\'éteindre.', 6); }
         if (p.idx === 1 && !api.flag('j2lamp')) { api.set('j2lamp'); api.obj(p, 'Trouver un moyen de sortir de cette pièce.'); }
         return;
-      case 'note': api.read(p, sp.title, sp.text()); return;
+      case 'note': api.read(p, sp.title, sp.text()); if (sp.scare && !api.flag('sc' + o.uid)) { api.set('sc' + o.uid); api.scareSoon(p, sp.scare, 3 + Math.random() * 3); } return;
       case 'hide': return enterHide(p, o);
       case 'stairs': return useStairs(p, o);
       case 'custom': return sp.use(p, o);
@@ -385,6 +390,14 @@ const G = (() => {
       case 'decor': api.say(p, sp.examine); return;
     }
   }
+  /* ---------- Screamers ---------- */
+  api.scare = (p, kind) => {
+    if (!settings.scares || p.down || !running) return;
+    p.scare = { t: 1.0, kind: kind || (Math.random() < 0.5 ? 'girl' : 'sack') };
+    p.fear = 1; p.scareT = 200 + Math.random() * 260;
+    AUDIO.play('scream', 1, p.idx === 0 ? -0.75 : 0.75);
+  };
+  api.scareSoon = (p, kind, delay) => { p.pendingScare = { t: delay, kind }; };
   api.twin = (p, key, done, failMsg) => {
     const now = S.time;
     S.twin[key] = S.twin[key] || [-99, -99];
@@ -405,7 +418,7 @@ const G = (() => {
         'Ces portes coulissantes sont bien trop lourdes. Il faudrait pousser à deux, en même temps.');
     }
     if (o.locked) {
-      if (sp.key && api.has(p, sp.key)) { api.take(p, sp.key); o.locked = false; sfxAt('unlock', o.floor, o.cx, o.cz); openDoor(o, p); api.say(p, 'Déverrouillé.'); return; }
+      if (sp.key && api.has(p, sp.key)) { api.take(p, sp.key); o.locked = false; sfxAt('unlock', o.floor, o.cx, o.cz); openDoor(o, p); api.say(p, 'Déverrouillé.'); if (sp.scare) api.scareSoon(p, sp.scare, 1.4); return; }
       if (sp.codeLock) {
         const cl = sp.codeLock;
         api.openDial(p, { title: cl.title, desc: cl.desc, dials: Array.from({ length: cl.len }, () => DIGITS), answer: () => cl.answer().split(''),
@@ -416,7 +429,12 @@ const G = (() => {
       api.say(p, sp.lockMsg || 'C\'est fermé à clé.');
       return;
     }
+    if (o.riddle && !o.open) { openQuiz(p, o); return; }
     if (o.open) closeDoor(o, p); else openDoor(o, p);
+  }
+  function openQuiz(p, o) {
+    const r = makeRiddle();
+    p.ui = { type: 'quiz', q: r.q, choices: r.choices, answer: r.answer, sel: 0, door: o, tries: (p.ui && p.ui.tries) || 0 };
   }
   function openDoor(o, by) {
     if (by) {
@@ -507,7 +525,7 @@ const G = (() => {
     AUDIO.play('power', 0.5, P[1].floor === 1 ? 0.8 : 0);
     api.say(P[0], 'Le courant revient ! Les ampoules grésillent et s\'allument une à une.');
     api.say(P[1], 'Les lumières se rallument en grésillant. Un moteur se met en marche quelque part sous le plancher.');
-    api.obj(P[0], 'Le monte-charge fonctionne. Aider Sam à sortir de l\'office.');
+    api.obj(P[0], 'Le monte-charge fonctionne. Aider Tom à sortir de l\'office.');
     if (!inRect(P[1], OFFICE)) api.obj(P[1], 'Rejoindre Léa au sous-sol.');
     else api.obj(P[1], 'Le monte-charge fonctionne. Attendre ce que Léa enverra.');
   }
@@ -566,7 +584,7 @@ const G = (() => {
     if (n === 2) {
       api.obj('both', 'Se retrouver, puis trouver un moyen de sortir du manoir.');
       spawnMonster(1, 5, 25);
-      api.say(P[0], 'J\'entends la porte s\'ouvrir en haut des marches... Sam ?');
+      api.say(P[0], 'J\'entends la porte s\'ouvrir en haut des marches... Tom ?');
     }
     if (n === 3) { api.obj('both', 'Explorer l\'étage. Trouver de quoi ouvrir la serrure de la porte d\'entrée.'); if (M.floor !== 2) spawnMonster(2, 35, 25); }
     if (n === 4) { api.obj('both', 'Fouiller le grenier.'); }
@@ -866,6 +884,10 @@ const G = (() => {
   /* ===================== Mise à jour des joueurs ===================== */
   function updatePlayer(p, dt) {
     const I = readInput(p);
+    if (p.scare) { p.scare.t -= dt; if (p.scare.t <= 0) p.scare = null; }
+    if (p.pendingScare) { p.pendingScare.t -= dt; if (p.pendingScare.t <= 0) { const k = p.pendingScare.kind; p.pendingScare = null; api.scare(p, k); } }
+    p.scareT -= dt;
+    if (p.scareT <= 0) { if (!p.hidden && !p.tele && !p.down && !(M.state === 'chase')) api.scare(p); else p.scareT = 20; }
     if (p.down) { updateDown(p, dt); return; }
     if (p.tele) {
       p.tele.t += dt;
@@ -966,6 +988,25 @@ const G = (() => {
   function handleUI(p, I) {
     const ui = p.ui;
     if (ui.type === 'note') { if (I.useP || I.cancelP) { p.ui = null; } return; }
+    if (ui.type === 'quiz') {
+      const n = ui.choices.length;
+      if (I.nav.u || I.nav.l) { ui.sel = (ui.sel + n - 1) % n; api.sfx('force', p, 0.2); }
+      if (I.nav.d || I.nav.r) { ui.sel = (ui.sel + 1) % n; api.sfx('force', p, 0.2); }
+      if (I.cancelP) { p.ui = null; return; }
+      if (I.useP) {
+        const o = ui.door;
+        if (ui.sel === ui.answer) {
+          p.ui = null; o.riddle = false; S.riddleDone[o.uid] = true;
+          sfxAt('unlock', o.floor, o.cx, o.cz); openDoor(o, p); api.say(p, 'Bonne réponse. Le mécanisme se déverrouille.', 3);
+        } else {
+          sfxAt('locked', o.floor, o.cx, o.cz, 1); sfxAt('knock', o.floor, o.cx, o.cz, 0.9); addNoise(o.floor, o.cx, o.cz, 10);
+          api.say(p, 'Mauvaise réponse ! Le mécanisme claque bruyamment... Il a dû l\'entendre.', 4);
+          const tries = ui.tries + 1; openQuiz(p, o); p.ui.tries = tries; p.ui.shake = 0.4;
+          if (Math.random() < 0.3) api.scareSoon(p, Math.random() < 0.5 ? 'girl' : 'sack', 0.5);
+        }
+      }
+      return;
+    }
     if (ui.type === 'dial') {
       const n = ui.cfg.dials.length;
       if (I.nav.l) ui.col = (ui.col + n - 1) % n;
@@ -1029,7 +1070,8 @@ const G = (() => {
   /* ===================== Caméras ===================== */
   function updateCameras(dt) {
     P.forEach(p => {
-      const eye = p.hidden ? 1.55 : p.crouch ? 1.0 : 1.62;
+      const tall = p.idx === 0 ? 1.14 : 1.36;
+      const eye = p.hidden ? tall : p.crouch ? 0.72 : tall;
       p.eyeY = p.eyeY === undefined ? eye : p.eyeY + (eye - p.eyeY) * Math.min(1, dt * 8);
       const bob = Math.sin(p.bobT * 2) * 0.035 * Math.min(1, p.speed / 2);
       const sway = Math.cos(p.bobT) * 0.02 * Math.min(1, p.speed / 2);
@@ -1039,6 +1081,13 @@ const G = (() => {
       p.cam.rotation.y = p.yaw;
       p.cam.rotation.x = p.pitch + (p.down ? -Math.min(1.2, p.down.t * 0.8) : 0);
       p.cam.rotation.z = p.down ? Math.min(0.8, p.down.t * 0.5) : 0;
+      if (p.scare) { p.cam.position.x += (Math.random() - 0.5) * 0.05; p.cam.position.y += (Math.random() - 0.5) * 0.05; }
+      // avatar (vu par l'autre joueur)
+      const av = p.avatar, U = av.userData;
+      av.position.set(p.x, p.floor * SEP, p.z); av.rotation.y = p.yaw + Math.PI;
+      av.scale.y = p.crouch ? 0.68 : 1;
+      const sw = Math.sin(p.bobT) * Math.min(0.7, p.speed * 0.25);
+      U.legL.rotation.x = sw; U.legR.rotation.x = -sw; U.armL.rotation.x = -sw * 0.8; U.armR.rotation.x = p.lamp ? -1.2 : sw * 0.8;
     });
   }
 
@@ -1087,6 +1136,7 @@ const G = (() => {
       const x = i * (w - hw), vw = i ? w - hw : hw;
       renderer.setViewport(x, 0, vw, h); renderer.setScissor(x, 0, vw, h);
       p.cam.aspect = vw / h; p.cam.updateProjectionMatrix();
+      P.forEach(q => { q.avatar.visible = q !== p && !q.hidden && !(q.down && q.down.t > 2.5); });
       renderer.render(scene, p.cam);
     });
     renderer.setScissorTest(false);
@@ -1102,6 +1152,7 @@ const G = (() => {
     label(i, o) { return labelFor(o, P[i]); },
     dial(i, values) { const p = P[i]; if (!p.ui || p.ui.type !== 'dial') return 'nodial'; const ui = p.ui; ui.vals = values.map((v, k) => ui.cfg.dials[k].indexOf(String(v))); const ans = ui.cfg.answer(); const val = ui.vals.map((v, k) => ui.cfg.dials[k][v]); if (val.every((v, k) => v === ans[k])) { p.ui = null; ui.cfg.success(p); return true; } return false; },
     closeUI(i) { P[i].ui = null; },
+    quiz(i) { const u = P[i].ui; if (!u || u.type !== 'quiz') return false; u.sel = u.answer; const o = u.door; P[i].ui = null; o.riddle = false; S.riddleDone[o.uid] = true; o.open = true; return true; },
     setChapter, catchPlayer: (i) => catchPlayer(P[i]), finishGame, astar, monsterPassable,
     get running() { return running; }, get ended() { return ended; },
   };

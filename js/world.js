@@ -6,6 +6,7 @@
    ===================================================================== */
 const WORLD = (() => {
   const FLOOR_SEP = 20;
+  const PHOTO = typeof ASSETS !== 'undefined';
   const WALL_CH = new Set(['#', 'W', ' ']);
   const FLOOR_CH = new Set(['.', ',', ':', '_', ';']);
   const DIRS = [[0, -1], [0, 1], [-1, 0], [1, 0]]; // N S O E
@@ -43,6 +44,33 @@ const WORLD = (() => {
         cells.push({ x, y, ch, wall: WALL_CH.has(ch), ft: FLOOR_CH.has(ch) ? ch : null, obj: null, win: ch === 'W' });
       }
       floors.push({ idx: f, W: Wd, H, cells, ceil: F.ceil, y0: f * FLOOR_SEP, def: F.defFloor });
+    });
+    // --- ameublement automatique (déterministe) le long des murs, sans jamais gêner le passage ---
+    floors.forEach(fl => {
+      let seed = 9001 + fl.idx * 7919;
+      const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+      const plain = (x, y) => { const c = cell(fl, x, y); return c && !c.wall && FLOOR_CH.has(c.ch); };
+      const THEME = { '.': ['&', '%', '*', 'y', 'e', 'g', '&', '%'], '_': ['%', '*', 'y', '&'], ',': ['c', 'g', 'e', '*'], ':': ['r', 'l', 'r', 'e'], ';': ['r', 'q', 'k', 'r', 'x'] };
+      fl.cells.forEach(c => {
+        if (c.wall || !FLOOR_CH.has(c.ch)) return;
+        for (let d = 0; d < 4; d++) {
+          const [dx, dy] = DIRS[d];
+          const w = cell(fl, c.x + dx, c.y + dy);
+          if (!w || !w.wall || w.ch === 'W') continue;
+          // devant et encore devant : libres ; les deux côtés : libres ; aucun objet/porte au contact
+          if (!plain(c.x - dx, c.y - dy) || !plain(c.x - 2 * dx, c.y - 2 * dy)) continue;
+          if (!plain(c.x + dy, c.y + dx) || !plain(c.x - dy, c.y - dx)) continue;
+          if (!plain(c.x + dy - dx, c.y + dx - dy) || !plain(c.x - dy - dx, c.y - dx - dy)) continue;
+          let near = false;
+          for (let yy = -2; yy <= 2; yy++) for (let xx = -2; xx <= 2; xx++) { const n = cell(fl, c.x + xx, c.y + yy); if (n && !n.wall && !FLOOR_CH.has(n.ch) && !n.auto) near = true; if (n && n.auto && Math.abs(xx) + Math.abs(yy) <= 1) near = true; }
+          if (near) continue;
+          if (fl.idx === 0 && c.x <= 5 && c.y <= 4) continue; // la cellule reste vide
+          if (rnd() > 0.34) break;
+          const list = THEME[c.ch] || THEME['.'];
+          c.ft = c.ch; c.ch = list[Math.floor(rnd() * list.length)]; c.auto = true;
+          break;
+        }
+      });
     });
     // types de sol dérivés
     floors.forEach(fl => {
@@ -209,8 +237,22 @@ const WORLD = (() => {
           if (d === 2) { a = [x0, z0]; b2 = [x0, z1]; nor = [-1, 0, 0]; u0 = z0; u1 = z1; }
           if (d === 3) { a = [x1, z1]; b2 = [x1, z0]; nor = [1, 0, 0]; u0 = z1; u1 = z0; }
           const s = 0.5;
+          const vt = PHOTO ? H * s : 1;
           quad(mk, [a[0], 0, a[1]], [b2[0], 0, b2[1]], [b2[0], H, b2[1]], [a[0], H, a[1]], nor,
-            [u0 * s, 0, u1 * s, 0, u1 * s, 1, u0 * s, 1]);
+            [u0 * s, 0, u1 * s, 0, u1 * s, vt, u0 * s, vt]);
+          // lambris et plinthe en bois dans les pièces d'habitation
+          if (PHOTO && (fl.idx === 1 || fl.idx === 2) && (n.ft === '.' || n.ft === '_')) {
+            const e = 0.018, ox = nor[0] * e, oz = nor[2] * e, hw = 0.92;
+            quad('x', [a[0] + ox, 0, a[1] + oz], [b2[0] + ox, 0, b2[1] + oz], [b2[0] + ox, hw, b2[1] + oz], [a[0] + ox, hw, a[1] + oz], nor, [u0, 0, u1, 0, u1, hw, u0, hw]);
+            const e2 = 0.04, px = nor[0] * e2, pz = nor[2] * e2;
+            for (const [y0, y1] of [[0, 0.12], [hw - 0.05, hw + 0.03]]) {
+              quad('x', [a[0] + px, y0, a[1] + pz], [b2[0] + px, y0, b2[1] + pz], [b2[0] + px, y1, b2[1] + pz], [a[0] + px, y1, a[1] + pz], nor, [u0, 0.5, u1, 0.5, u1, 0.56, u0, 0.56]);
+              quad('x', [a[0] + ox, y1, a[1] + oz], [b2[0] + ox, y1, b2[1] + oz], [b2[0] + px, y1, b2[1] + pz], [a[0] + px, y1, a[1] + pz], [0, 1, 0], [u0, 0.6, u1, 0.6, u1, 0.62, u0, 0.62]);
+            }
+          }
+          if (!c.win && (fl.idx === 1 || fl.idx === 2) && (n.ft === '.' || n.ft === '_') && FLOOR_CH.has(n.ch) && ((c.x * 31 + c.y * 17 + d * 7) % 9 === 0)) {
+            const pm = MODELS.build('painting'); pm.position.set(c.x + 0.5 + dx, 0, c.y + 0.5 + dy); pm.rotation.y = ROT[[1, 0, 3, 2][d]]; pm.userData.static = true; group.add(pm);
+          }
           if (c.win && fl.idx !== 0) {
             const m = MODELS.build('window');
             m.position.set(c.x + 0.5 + dx, 0, c.y + 0.5 + dy);
@@ -239,9 +281,11 @@ const WORLD = (() => {
       let mat;
       if (k[0] === 'w') mat = mats.wall[k.slice(1)] || mats.wall['.'];
       else if (k[0] === 'f') mat = mats.floor[k.slice(1)] || mats.floor['.'];
+      else if (k === 'x') mat = mats.woodDark;
       else mat = k === 'cCave' ? mats.ceilCave : k === 'cAttic' ? mats.ceilAttic : mats.ceil;
       const m = new THREE.Mesh(geo, mat);
       m.receiveShadow = true; m.castShadow = k[0] === 'w';
+      if (k === 'x') m.castShadow = false;
       group.add(m);
     }
     // poutres du grenier
@@ -358,6 +402,12 @@ const WORLD = (() => {
       }
     });
     objects.forEach(o => { if (o.spec.light === 'candle') lamps.push({ floor: o.floor, x: o.cx, z: o.cz, y: floors[o.floor].y0 + 0.35, kind: 'candle', need: null, phase: Math.random() * 100 }); });
+    lamps.forEach(l => {
+      if (l.kind === 'ceil' && l.floor >= 1) {
+        const c = cell(floors[l.floor], Math.floor(l.x), Math.floor(l.z));
+        if (c && c.ft === '.') { const rg = MODELS.build('rug', { w: 2.8, d: 1.9 }); rg.position.set(l.x, 0, l.z); rg.rotation.y = (Math.floor(l.x) % 2) * Math.PI / 2; rg.userData.static = true; root.children[l.floor].add(rg); }
+      }
+    });
     lamps.forEach(l => {
       if (l.kind === 'ceil') {
         l.mesh = MODELS.B.ceilLamp(floors[l.floor].ceil, false);

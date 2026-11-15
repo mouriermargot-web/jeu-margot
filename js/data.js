@@ -9,7 +9,7 @@ const DOLLS = ['PERLE','FLEUR','NINON','LUCIE','AGATE','ROSIE','JULIE','PAULE','
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const DIGITS = '0123456789'.split('');
 const pad2 = n => String(n).padStart(2, '0');
-const PLAYER_NAMES = ['Léa', 'Sam'];
+const PLAYER_NAMES = ['Léa', 'Tom'];
 
 function makeCodes() {
   const r = n => Math.floor(Math.random() * n);
@@ -72,6 +72,9 @@ const DECOR = {
   q: { model: 'toilet', wall: true },
   u: { model: 'tubend' },
   B: { model: 'boiler' },
+  '&': { model: 'armchair', wall: true },
+  '%': { model: 'gueridon', wall: true },
+  '*': { model: 'sidetable', wall: true },
 };
 
 const row = (...parts) => parts.join('');
@@ -230,7 +233,7 @@ const LEGEND_RDC = {
   '+': { type: 'door' },
   H: { type: 'secret', name: 'Bibliothèque murale', rot: Math.PI / 2 },
   X: { type: 'item', item: 'coupe_boulon', furn: 'table' },
-  n: { type: 'note', furn: 'table', title: 'Une boîte de photographies',
+  n: { type: 'note', furn: 'table', scare: 'sack', title: 'Une boîte de photographies',
     text: () => "Des dizaines de photos, rangées avec soin. Des inconnus, endormis. Un homme en ciré. Deux adolescentes. Un couple de randonneurs.\n\nAu dos, des dates : 1979, 1983, 1988, 1996, 2004, 2011, 2019...\n\nLa dernière photo est un polaroid encore brillant. Elle est datée d'hier." },
   B: { type: 'custom', model: 'bookslot', wall: true,
     label: (p) => G.flag('secret') ? null : (G.has(p, 'livre') ? 'Ranger le livre' : 'Examiner l\'étagère'),
@@ -311,13 +314,13 @@ const LEGEND_RDC = {
   k: { type: 'item', item: 'petite_cle', furn: 'counter', wall: true },
   z: { type: 'battery', furn: 'table' },
   '1': { type: 'note', furn: 'table', title: "Carnet d'Armand (page arrachée)",
-    text: () => `« Ranger les outils de Père dans l'atelier, en bas. Mère ne doit pas savoir.\nCode de l'atelier : ${G.codes.atelier}\n\nLes nouveaux invités dorment bien. La fille a une lampe. Je lui laisse. Clémence aimait jouer à cache-cache dans le noir. »` },
+    text: () => `« Ranger les outils de Père dans l'atelier, en bas. Mère ne doit pas savoir.\nCode de l'atelier : ${G.codes.atelier}\n\nLes deux petits dorment bien. La petite avait une lampe dans sa poche. Je lui laisse. Clémence aimait jouer à cache-cache dans le noir. »` },
   '2': { type: 'note', furn: 'table', title: "Note de l'électricien",
     text: () => `Établissements Morin & Fils — 12 mai 1971\n\nTableau du sous-sol remis en état. Trois fusibles neufs livrés (à ranger : cave à vin, buanderie, atelier).\n\nPour le réarmement, positionner les leviers ainsi :\n  Levier 1 : ${G.codes.fuses[0] ? 'HAUT' : 'BAS'}\n  Levier 2 : ${G.codes.fuses[1] ? 'HAUT' : 'BAS'}\n  Levier 3 : ${G.codes.fuses[2] ? 'HAUT' : 'BAS'}\n  Levier 4 : ${G.codes.fuses[3] ? 'HAUT' : 'BAS'}\n\nToute autre combinaison ne rétablira pas le courant.\nNB : le circuit de l'étage est hors service.` },
   '3': { type: 'note', furn: 'floor', title: 'Billet froissé',
     text: () => "Au crayon, sur un ticket de bus de 2019 :\n\n« Si vous lisez ça : il chante une berceuse quand il marche. Si vous l'entendez, CACHEZ-VOUS.\nIl ne fouille pas les armoires s'il ne vous a pas vu y entrer.\nIl voit la lumière des lampes de loin. Éteignez.\nNe courez que s'il vous a vu, il entend tout.\n\nLa porte d'entrée : une serrure, une chaîne, une barre. Il faut être deux pour la barre.\n— M. »" },
-  '4': { type: 'note', furn: 'dresserlow', title: 'Un polaroid',
-    text: () => "Un polaroid, encore tiède.\n\nDeux personnes endormies sur un matelas, dans le noir.\n\nC'est nous. Cette nuit.\n\nAu dos, d'une écriture appliquée : « Bienvenue à la maison. »" },
+  '4': { type: 'note', furn: 'dresserlow', scare: 'girl', title: 'Un polaroid',
+    text: () => "Un polaroid, encore tiède.\n\nDeux enfants endormis, dans le noir. Une petite fille et un garçon.\n\nC'est nous. Cette nuit.\n\nAu dos, d'une écriture appliquée : « Bienvenue à la maison. »" },
   R: { type: 'note', furn: 'crate', title: 'Calendrier des Postes, 1974',
     text: () => "Un calendrier arrêté au mois d'octobre 1974. Le 19 est entouré en rouge.\n\nEn dessous : « Mère est partie dormir avec Clémence. Je reste. Je garde la maison. »" },
   M: { type: 'custom', model: 'dumbwaiter', wall: true, end: 1,
@@ -334,7 +337,7 @@ const LEGEND_ETAGE = {
       if (!G.has(p, 'perche')) { G.say(p, "La baignoire est pleine d'une eau noire et croupie. Quelque chose brille au fond, près de la bonde. Hors de question d'y plonger la main..."); return; }
       G.set('tub'); G.sfx('drain', p);
       G.say(p, "Avec la perche, vous accrochez la chaînette de la bonde. L'eau s'écoule dans un gargouillis... Au fond : une clé.");
-      G.give(p, 'cle_clemence'); G.refreshAll();
+      G.give(p, 'cle_clemence'); G.refreshAll(); G.scareSoon(p, 'girl', 2.2);
     } },
   J: { type: 'custom', model: 'jewelbox', furn: 'dresser', wall: true,
     label: () => G.flag('jewel') ? null : 'Ouvrir le coffret à bijoux',
@@ -357,10 +360,10 @@ const LEGEND_ETAGE = {
   X: { type: 'door', locked: true, key: 'cle_armand', name: "Chambre d'Armand",
     lockMsg: "Fermée à clé. Quelqu'un a gravé dans le bois : « PAS TOUCHE ». Une écriture d'adulte qui imite celle d'un enfant." },
   Y: { type: 'item', item: 'cle_malle', furn: 'desk' },
-  d: { type: 'note', furn: 'table', title: 'Journal de Clémence',
+  d: { type: 'note', furn: 'table', scare: 'girl', title: 'Journal de Clémence',
     text: () => `Écriture d'enfant, au crayon de couleur :\n\n« Ma poupée s'appelle ${G.codes.doll}. C'est le plus joli nom du monde.\nArmand dit que les poupées n'ont pas d'âme. Armand est méchant.\nIl a mis un cadenas avec des lettres sur la trappe du grenier. Il dit que le mot secret, c'est le nom de ma poupée, comme ça je ne l'oublierai jamais.\nJe n'aime pas le grenier. »` },
   H: { type: 'item', item: 'perche', furn: 'none', wall: true },
-  K: { type: 'door', locked: true, key: 'cle_clemence', name: 'Chambre de Clémence',
+  K: { type: 'door', locked: true, key: 'cle_clemence', name: 'Chambre de Clémence', scare: 'girl',
     lockMsg: "Fermée à clé. Des fleurs séchées sont accrochées à la poignée." },
   G: { type: 'door', locked: true, key: 'cle_lingerie', name: 'Lingerie', lockMsg: 'Fermée à clé. Une étiquette : « Lingerie ».' },
   v: { type: 'stairs', link: 'grille', dir: 'down', label: 'Descendre au rez-de-chaussée' },
@@ -402,7 +405,7 @@ const LEGEND_GRENIER = {
       answer: () => (pad2(G.codes.day) + pad2(G.codes.month + 1)).split(''),
       success: (p) => { G.set('trunk'); G.sfx('unlock', p); G.give(p, 'grande_cle'); G.refreshAll(); G.onGrandeCle(p); },
     }) },
-  S: { type: 'note', model: 'shrine', title: 'Un autel',
+  S: { type: 'note', model: 'shrine', scare: 'girl', title: 'Un autel',
     text: () => "Une petite table couverte de bougies. Au centre, la photo d'une fillette en robe blanche, et une poupée de porcelaine au visage fendu.\n\nAutour, des objets alignés avec soin : une montre, un bonnet, des lunettes, un téléphone portable, une barrette rose... Des dizaines d'objets.\n\nLes « invités »." },
   c: { model: 'candles', type: 'decor', light: 'candle' },
   b: { model: 'mattress', group: true },
@@ -433,8 +436,57 @@ const CHAPTERS = [
 ];
 
 const INTRO_TEXT = [
-  "Octobre. Le domaine Valcourt est abandonné depuis 1974.",
-  "Léa et Sam voulaient seulement quelques photos pour leur chaîne d'exploration urbaine. Une maison vide, à l'orée de la forêt.",
-  "Ils se souviennent d'être entrés. D'une odeur de bougie. D'une berceuse, quelque part dans les murs.",
+  "Octobre. Le domaine Valcourt est abandonné depuis 1974. Tous les enfants du village le savent : on ne passe pas la grille.",
+  "Léa, 8 ans, voulait seulement récupérer son ballon. Tom, son grand frère de 11 ans, l'a suivie pour ne pas la laisser seule.",
+  "Ils se souviennent de la porte entrouverte. D'une odeur de bougie. D'une berceuse, quelque part dans les murs.",
   "Puis plus rien.",
 ];
+
+/* ---------- Serrures à énigmes ---------- */
+const RIDDLES = [
+  ["Je commence la nuit et je finis le matin. Qui suis-je ?", "La lettre N", ["La lune", "Le sommeil", "Le rêve"]],
+  ["Plus j'ai de gardiens, moins je suis gardé. Qui suis-je ?", "Un secret", ["Un trésor", "Un prisonnier", "Un château"]],
+  ["J'ai des dents mais je ne mords pas. Qui suis-je ?", "Un peigne", ["Un loup", "Une clé", "Un chien"]],
+  ["Plus je sèche, plus je suis mouillée. Qui suis-je ?", "Une serviette", ["La pluie", "Une éponge de mer", "Une rivière"]],
+  ["On me casse sans me toucher. Qui suis-je ?", "Le silence", ["Un verre", "Un œuf", "Une promesse d'acier"]],
+  ["J'ai un chapeau mais pas de tête, un pied mais pas de chaussure. Qui suis-je ?", "Un champignon", ["Un épouvantail", "Un clou", "Une lampe"]],
+  ["Qu'est-ce qui monte et qui descend sans jamais bouger ?", "Un escalier", ["Un ascenseur", "La fumée", "Un oiseau"]],
+  ["Quel mois de l'année a 28 jours ?", "Tous les mois", ["Février seulement", "Aucun", "Janvier"]],
+  ["J'ai des aiguilles mais je ne couds pas. Qui suis-je ?", "Une horloge", ["Un hérisson malade", "Une couturière", "Un sapin de fer"]],
+  ["Je grandis quand on me nourrit, je meurs quand on me donne à boire. Qui suis-je ?", "Le feu", ["Une plante", "Un enfant", "Un poisson"]],
+  ["Plus on m'enlève, plus je deviens grand. Qui suis-je ?", "Un trou", ["Un gâteau", "Un mur", "Un arbre"]],
+  ["Je suis toujours devant toi mais tu ne peux jamais me voir. Qui suis-je ?", "L'avenir", ["Ton ombre", "Ton nez", "Le vent"]],
+  ["J'ai une tête et une queue, mais pas de corps. Qui suis-je ?", "Une pièce de monnaie", ["Un serpent", "Une comète", "Un têtard"]],
+  ["Qu'est-ce qui a des feuilles mais n'est pas un arbre ?", "Un livre", ["Une forêt", "Une salade de pierre", "Un nuage"]],
+  ["Je parle sans bouche et j'entends sans oreilles. Qui suis-je ?", "Un écho", ["Un fantôme", "Un téléphone cassé", "Une statue"]],
+  ["On me prend avant de me donner. Qui suis-je ?", "Une photo", ["Un cadeau", "Un coup", "Un rhume"]],
+  ["Je suis plein de trous et pourtant je retiens l'eau. Qui suis-je ?", "Une éponge", ["Un seau percé", "Un filet", "Une passoire"]],
+  ["Plus il y en a, moins on y voit. Qu'est-ce que c'est ?", "L'obscurité", ["Les fenêtres", "Les bougies", "Les lunettes"]],
+  ["Combien de pattes ont trois araignées ?", "24", ["18", "12", "30"]],
+  ["Le père de Clémence a trois enfants : Pim, Pam et... ?", "Clémence", ["Poum", "Pom", "Armand seulement"]],
+  ["Si tu me nommes, je disparais. Qui suis-je ?", "Le silence", ["Un secret gardé", "Une ombre", "Un rêve"]],
+  ["Qu'est-ce qui a un lit mais ne dort jamais ?", "Une rivière", ["Un hôpital", "Un chat", "Une poupée"]],
+  ["Je n'ai pas de jambes, pourtant je cours. Qui suis-je ?", "L'eau", ["Un serpent", "Le temps perdu", "Un caillou"]],
+  ["Un coq pond un œuf au sommet d'un toit. De quel côté tombe-t-il ?", "Un coq ne pond pas", ["À gauche", "À droite", "Il reste en haut"]],
+];
+function makeRiddle() {
+  const r = n => Math.floor(Math.random() * n);
+  const shuffle = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(v => v[1]);
+  if (Math.random() < 0.55) {
+    let q, ans;
+    const t = r(6);
+    if (t === 0) { const a = 2 + r(8), b = 2 + r(8); q = `Combien font ${a} × ${b} ?`; ans = a * b; }
+    else if (t === 1) { const a = 12 + r(60), b = 11 + r(40); q = `Combien font ${a} + ${b} ?`; ans = a + b; }
+    else if (t === 2) { const b = 6 + r(30), a = b + 5 + r(50); q = `Combien font ${a} − ${b} ?`; ans = a - b; }
+    else if (t === 3) { const a = 2 + r(8), b = 2 + r(8), c = 1 + r(9); q = `Combien font ${a} × ${b} + ${c} ?`; ans = a * b + c; }
+    else if (t === 4) { const st = 2 + r(7), a0 = 1 + r(9); q = `Quel nombre continue la suite ?  ${a0}, ${a0 + st}, ${a0 + 2 * st}, ${a0 + 3 * st}, ...`; ans = a0 + 4 * st; }
+    else { const b = 2 + r(8), ans0 = 2 + r(9); q = `Combien font ${b * ans0} ÷ ${b} ?`; ans = ans0; }
+    const wrong = new Set();
+    while (wrong.size < 3) { const w = ans + (r(2) ? 1 : -1) * (1 + r(6)); if (w !== ans && w >= 0) wrong.add(w); }
+    const choices = shuffle([ans, ...wrong].map(String));
+    return { q, choices, answer: choices.indexOf(String(ans)) };
+  }
+  const [q, ok, bad] = RIDDLES[r(RIDDLES.length)];
+  const choices = shuffle([ok, ...bad]);
+  return { q, choices, answer: choices.indexOf(ok) };
+}

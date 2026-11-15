@@ -68,6 +68,15 @@
   .panel.dial .col.cur { border-color: #c8a868; box-shadow: 0 0 12px rgba(200,168,104,.35); }
   .panel.dial .col.cur b { color: #c8a868; }
   .panel.dial .close { margin-top: 18px; font-size: 13px; font-family: Arial, sans-serif; color: var(--dim); line-height: 2; }
+  .panel.quiz { background: rgba(10,8,6,.95); border: 1px solid #5a4a2a; text-align: center; box-shadow: 0 0 60px #000; }
+  .panel.quiz h2 { margin: 0 0 6px; font-weight: normal; letter-spacing: 2px; color: #c8a868; }
+  .panel.quiz .desc { color: var(--dim); font-style: italic; margin-bottom: 14px; font-size: 14px; }
+  .panel.quiz .question { font-size: 22px; line-height: 1.4; margin: 10px 0 18px; color: #f0e6d0; }
+  .panel.quiz .choices div { border: 1px solid #333; background: #12100d; margin: 7px auto; padding: 9px 14px; max-width: 420px; font-size: 19px; color: #b8ac94; }
+  .panel.quiz .choices div.cur { border-color: #c8a868; color: #fff; box-shadow: 0 0 12px rgba(200,168,104,.35); }
+  .panel.quiz .close { margin-top: 14px; font-size: 12px; font-family: Arial, sans-serif; color: var(--dim); line-height: 1.9; }
+  .scare { display: none; position: absolute; inset: 0; background: #000; align-items: center; justify-content: center; overflow: hidden; z-index: 50; }
+  .scare img { height: 100%; max-width: none; filter: contrast(1.25); }
   .panel.shake { animation: shake .4s; }
   @keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
 
@@ -114,15 +123,15 @@
   <button id="btnContinue">Continuer</button>
   <button id="btnControls">Commandes</button>
   <button id="btnOptions">Options &amp; luminosité</button>
-  <div class="warn">Ce jeu contient des scènes angoissantes, l'évocation de meurtres et de séquestration. Déconseillé aux moins de 16 ans.<br>
-    Jouez dans le noir, au casque ou avec des enceintes stéréo : le son à gauche est celui de Léa (écran gauche), à droite celui de Sam.</div>
+  <div class="warn">Ce jeu contient des scènes angoissantes, des apparitions soudaines accompagnées de cris (« screamers »), l'évocation de meurtres et de séquestration. Déconseillé aux moins de 16 ans et aux personnes cardiaques ou épileptiques.<br>
+    Jouez dans le noir, au casque ou avec des enceintes stéréo : le son à gauche est celui de Léa (écran gauche), à droite celui de Tom.</div>
 </div>
 
 <div class="screen" id="controls">
   <h2 style="font-weight:normal;letter-spacing:4px">COMMANDES</h2>
   <div class="cols">
     <div><h3>Léa — Joueur 1 (écran gauche)</h3><div id="ctrlP1"></div></div>
-    <div><h3>Sam — Joueur 2 (écran droit)</h3><div id="ctrlP2"></div></div>
+    <div><h3>Tom — Joueur 2 (écran droit)</h3><div id="ctrlP2"></div></div>
   </div>
   <div class="tips">
     <b>Manettes :</b> chaque joueur peut utiliser une manette (choix dans les Options). Stick gauche : se déplacer · stick droit : regarder · A : interagir · X : lampe · B : s'accroupir/annuler · Y : objet suivant · LB : donner · RB : courir · Start : pause.<br><br>
@@ -142,9 +151,10 @@
     <label>Volume</label><input id="optVol" type="range" min="0" max="1" step="0.05">
     <label>Sensibilité de la vue</label><input id="optSens" type="range" min="0.3" max="2.5" step="0.05">
     <label>Ombres dynamiques</label><input id="optShadows" type="checkbox">
+    <label>Screamers (apparitions soudaines)</label><input id="optScares" type="checkbox">
     <label>Contrôles de Léa (J1)</label>
     <select id="optC1"><option value="kbm">Clavier gauche + souris</option><option value="kb2">Clavier droit (flèches)</option><option value="pad0">Manette 1</option><option value="pad1">Manette 2</option></select>
-    <label>Contrôles de Sam (J2)</label>
+    <label>Contrôles de Tom (J2)</label>
     <select id="optC2"><option value="kb2">Clavier droit (flèches)</option><option value="kbm">Clavier gauche + souris</option><option value="pad0">Manette 1</option><option value="pad1">Manette 2</option></select>
   </div>
   <button class="back">Retour</button>
@@ -182,6 +192,7 @@
 </div>
 
 <script src="js/three.min.js"></script>
+<script src="js/assets.js"></script>
 <script src="js/data.js"></script>
 <script src="js/textures.js"></script>
 <script src="js/models.js"></script>

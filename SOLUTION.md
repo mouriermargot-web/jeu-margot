@@ -9,13 +9,13 @@
 2. Le tableau électrique est dans la **chaufferie** (au nord du couloir). Il faut 3 fusibles :
    - **Cave à vin** : sur une caisse.
    - **Buanderie** : sur une étagère basse.
-   - **Atelier** : derrière un cadenas à 3 chiffres. **Le code est chez Sam**, dans le carnet d'Armand (office).
+   - **Atelier** : derrière un cadenas à 3 chiffres. **Le code est chez Tom**, dans le carnet d'Armand (office).
 3. Dans l'atelier, sur l'établi : la **clé de l'office**.
-4. Dans la chaufferie : une feuille arrachée avec le **code du cadenas de la cuisine** → à dicter à Sam.
-5. Les fusibles posés, régler les 4 leviers selon la **note de l'électricien** (chez Sam).
+4. Dans la chaufferie : une feuille arrachée avec le **code du cadenas de la cuisine** → à dicter à Tom.
+5. Les fusibles posés, régler les 4 leviers selon la **note de l'électricien** (chez Tom).
 6. Le courant revenu, envoyer la clé de l'office par le **monte-charge** (pièce de l'escalier).
 
-**Sam (office, rez-de-chaussée)**
+**Tom (office, rez-de-chaussée)**
 1. La lampe torche est sur la commode.
 2. Lire les deux documents sur la table (code de l'atelier, schéma des leviers) et les dicter à Léa.
 3. Récupérer la clé dans le monte-charge, sortir.

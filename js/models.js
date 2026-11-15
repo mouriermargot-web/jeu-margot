@@ -145,6 +145,51 @@ const MODELS = (() => {
     box(g, 0.15, 0.25, D, M.fabricG, W / 2 - 0.07, 0.42, 0);
     return g;
   };
+  B.armchair = () => {
+    const g = new THREE.Group(), z = -0.08;
+    const m = Math.random() < 0.5 ? M.fabricR : M.fabricG;
+    box(g, 0.78, 0.4, 0.7, m, 0, 0.05, z);
+    box(g, 0.78, 0.62, 0.16, m, 0, 0.45, z - 0.28);
+    for (const sx of [-1, 1]) { box(g, 0.14, 0.26, 0.66, m, sx * 0.34, 0.45, z + 0.02); box(g, 0.05, 0.08, 0.05, M.woodDark, sx * 0.32, 0, z + 0.28); box(g, 0.05, 0.08, 0.05, M.woodDark, sx * 0.32, 0, z - 0.28); }
+    box(g, 0.5, 0.08, 0.5, M.fabricW, 0, 0.45, z + 0.04);
+    g.rotation.y = (Math.random() - 0.5) * 0.3;
+    const w = new THREE.Group(); w.add(g); return w;
+  };
+  B.gueridon = () => {
+    const g = new THREE.Group(), z = -0.12;
+    cyl(g, 0.3, 0.3, 0.035, M.woodDark, 0, 0.7, z, 20);
+    cyl(g, 0.035, 0.05, 0.7, M.woodDark, 0, 0, z, 8);
+    cyl(g, 0.2, 0.22, 0.03, M.woodDark, 0, 0, z, 12);
+    const r = Math.random();
+    if (r < 0.35) { cyl(g, 0.05, 0.08, 0.22, M.porcelain, 0, 0.735, z, 12); for (let i = 0; i < 4; i++) { const st = mesh(new THREE.ConeGeometry(0.012, 0.4, 4), M.black, (Math.random() - 0.5) * 0.08, 1.1, z + (Math.random() - 0.5) * 0.08, g); st.rotation.set((Math.random() - 0.5) * 0.6, 0, (Math.random() - 0.5) * 0.6); } }
+    else if (r < 0.65) { cyl(g, 0.06, 0.08, 0.03, M.brass, 0, 0.735, z, 10); cyl(g, 0.015, 0.015, 0.2, M.brass, 0, 0.76, z, 6); cyl(g, 0.02, 0.02, 0.12, M.wax, 0, 0.96, z, 6); }
+    else { for (let i = 0; i < 3; i++) box(g, 0.2, 0.035, 0.27, M.books[(Math.random() * 6) | 0], (Math.random() - 0.5) * 0.04, 0.735 + i * 0.036, z).rotation.y = (Math.random() - 0.5) * 0.5; }
+    return g;
+  };
+  B.sidetable = () => {
+    const g = new THREE.Group(), z = -0.5 + 0.22;
+    box(g, 0.9, 0.04, 0.4, M.woodDark, 0, 0.78, z);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, 0.045, 0.78, 0.045, M.woodDark, sx * 0.4, 0, z + sz * 0.15);
+    box(g, 0.82, 0.12, 0.34, M.woodDark, 0, 0.64, z);
+    // miroir ou cadre au-dessus
+    if (Math.random() < 0.5) { box(g, 0.6, 0.8, 0.04, M.brass, 0, 1.15, -0.47); const mir = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7), new THREE.MeshStandardMaterial({ color: 0x1a2224, roughness: 0.08, metalness: 0.9 })); mir.position.set(0, 1.55, -0.445); g.add(mir); }
+    else { cyl(g, 0.07, 0.05, 0.25, M.porcelain, -0.2, 0.82, z, 10); box(g, 0.16, 0.2, 0.02, M.brass, 0.2, 0.82, z).rotation.x = -0.15; }
+    return g;
+  };
+  B.rug = (o) => {
+    const g = new THREE.Group();
+    const m = mesh(boxGeo(o.w || 2.6, 0.012, o.d || 1.8), M.floor['_'], 0, 0.008, 0, g); m.castShadow = false;
+    return g;
+  };
+  B.painting = () => {
+    const g = new THREE.Group();
+    const w = 0.5 + Math.random() * 0.5, h = 0.45 + Math.random() * 0.4, y = 1.35 + Math.random() * 0.3;
+    box(g, w + 0.1, h + 0.1, 0.04, Math.random() < 0.5 ? M.brass : M.woodDark, 0, y, -0.475);
+    const c = new THREE.Mesh(new THREE.PlaneGeometry(w, h), M.portraits[(Math.random() * 4) | 0]);
+    c.position.set(0, y + h / 2 + 0.05, -0.45); g.add(c);
+    g.rotation.z = (Math.random() - 0.5) * 0.06;
+    return g;
+  };
   B.counter = () => {
     const g = new THREE.Group(), z = -0.5 + 0.3;
     box(g, 1, 0.86, 0.6, M.woodDark, 0, 0, z);
@@ -596,6 +641,46 @@ const MODELS = (() => {
     g.userData = { body, head, armL, armR, legL, legR, lantern, glass };
     g.traverse(c => { if (c.isMesh) { c.castShadow = true; } });
     glass.castShadow = false;
+    return g;
+  };
+
+  /* ---- Les enfants (Léa et Tom) ---- */
+  B.kid = (o) => {
+    const g = new THREE.Group();
+    const girl = !!o.girl;
+    const H = girl ? 1.22 : 1.45, k = H / 1.45;
+    const col = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 });
+    const skin = col(0xd9b49a), hair = col(girl ? 0x5a3418 : 0x2a1c12);
+    const top = col(girl ? 0xb8a030 : 0x8a2a22), bottom = col(girl ? 0xb8a030 : 0x2a3a5a), shoe = col(0x2a2a2a), sock = col(0xd8d8d0);
+    const body = new THREE.Group(); body.scale.setScalar(k); g.add(body);
+    // jambes
+    const mkLeg = (sx) => { const l = new THREE.Group(); l.position.set(sx * 0.075, 0.68, 0);
+      box(l, 0.09, 0.4, 0.1, girl ? skin : bottom, 0, -0.4, 0); box(l, 0.085, 0.2, 0.09, girl ? sock : bottom, 0, -0.6, 0); box(l, 0.1, 0.08, 0.2, shoe, 0, -0.68, 0.04);
+      body.add(l); return l; };
+    const legL = mkLeg(-1), legR = mkLeg(1);
+    // buste
+    if (girl) { const dress = mesh(new THREE.CylinderGeometry(0.13, 0.26, 0.62, 12), top, 0, 0.87, 0, body); }
+    else { box(body, 0.3, 0.42, 0.17, top, 0, 0.68, 0); box(body, 0.31, 0.2, 0.18, bottom, 0, 0.55, 0); }
+    // bras
+    const mkArm = (sx) => { const a = new THREE.Group(); a.position.set(sx * 0.19, 1.08, 0);
+      box(a, 0.07, 0.24, 0.08, top, 0, -0.24, 0); box(a, 0.06, 0.22, 0.065, skin, 0, -0.46, 0); body.add(a); return a; };
+    const armL = mkArm(-1), armR = mkArm(1);
+    const torch = cyl(armR, 0.02, 0.028, 0.16, M.iron, 0, -0.5, 0.06, 8); torch.rotation.x = Math.PI / 2;
+    // tête
+    box(body, 0.07, 0.07, 0.07, skin, 0, 1.08, 0);
+    const head = new THREE.Group(); head.position.set(0, 1.27, 0); body.add(head);
+    const hd = mesh(new THREE.SphereGeometry(0.135, 16, 14), skin, 0, 0, 0, head); hd.scale.set(0.95, 1.05, 1);
+    const eyeM = new THREE.MeshBasicMaterial({ color: 0x1a1210 });
+    mesh(new THREE.SphereGeometry(0.016, 6, 6), eyeM, -0.05, 0.01, 0.125, head); mesh(new THREE.SphereGeometry(0.016, 6, 6), eyeM, 0.05, 0.01, 0.125, head);
+    box(head, 0.04, 0.008, 0.01, col(0x7a4a40), 0, -0.065, 0.128);
+    const cap = mesh(new THREE.SphereGeometry(0.143, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hair, 0, 0.012, -0.012, head);
+    if (girl) {
+      for (const sx of [-1, 1]) { const t = cyl(head, 0.035, 0.02, 0.26, hair, sx * 0.15, -0.26, -0.01, 8); t.rotation.z = sx * 0.25; mesh(new THREE.SphereGeometry(0.022, 6, 6), col(0xa02030), sx * 0.14, -0.02, -0.01, head); }
+      box(head, 0.2, 0.05, 0.03, hair, 0, 0.075, 0.115);
+    } else {
+      box(head, 0.22, 0.045, 0.05, hair, 0, 0.085, 0.105).rotation.x = 0.2;
+    }
+    g.userData = { legL, legR, armL, armR, head };
     return g;
   };
 

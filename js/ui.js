@@ -32,6 +32,7 @@ const UI = (() => {
         chapter: el('div', 'chapter', h),
         hint: el('div', 'mousehint', h),
         cross: el('div', 'cross', h),
+        scare: el('div', 'scare', h, '<img alt="">'),
       };
       huds.push(o);
     }
@@ -46,7 +47,70 @@ const UI = (() => {
       for (let k = 0; k < d.length; k += 4) { const v = Math.random() * 255; d[k] = d[k + 1] = d[k + 2] = v; d[k + 3] = 255; }
       gx.putImageData(img, 0, 0);
     })();
+    FACES.girl = drawFace('girl'); FACES.sack = drawFace('sack');
     buildMenus();
+  }
+
+
+  /* ---------------- Visages des screamers (dessinés au lancement) ---------------- */
+  const FACES = {};
+  function drawFace(kind) {
+    const W = 640, c = document.createElement('canvas'); c.width = W; c.height = W;
+    const x = c.getContext('2d'); const R = (a, b) => a + Math.random() * (b - a);
+    x.fillStyle = '#000'; x.fillRect(0, 0, W, W);
+    const cx = W / 2, cy = W / 2 + 10;
+    if (kind === 'girl') {
+      // visage noyé, blafard
+      const g = x.createRadialGradient(cx, cy - 30, 30, cx, cy, 300);
+      g.addColorStop(0, '#dfe6e2'); g.addColorStop(0.6, '#9fb0aa'); g.addColorStop(1, '#3a4a48');
+      x.fillStyle = g; x.beginPath(); x.ellipse(cx, cy, 190, 265, 0, 0, 7); x.fill();
+      // veines
+      x.strokeStyle = 'rgba(40,60,90,0.5)'; x.lineWidth = 2;
+      for (let k = 0; k < 26; k++) { x.beginPath(); let px = cx + R(-170, 170), py = cy + R(-240, 240); x.moveTo(px, py); for (let n = 0; n < 7; n++) { px += R(-22, 22); py += R(-8, 30); x.lineTo(px, py); } x.stroke(); }
+      // orbites
+      for (const s of [-1, 1]) {
+        const ex = cx + s * 78, ey = cy - 55;
+        const eg = x.createRadialGradient(ex, ey, 5, ex, ey, 85); eg.addColorStop(0, '#000'); eg.addColorStop(0.7, '#000'); eg.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = eg; x.beginPath(); x.ellipse(ex, ey, 70, 85, s * 0.15, 0, 7); x.fill();
+        x.fillStyle = '#fff'; x.beginPath(); x.arc(ex + s * 4, ey + 6, 5, 0, 7); x.fill();
+        x.strokeStyle = '#000'; x.lineWidth = 7; for (let k = 0; k < 4; k++) { x.beginPath(); const dx = ex + R(-40, 40); x.moveTo(dx, ey + 60); x.lineTo(dx + R(-8, 8), ey + R(140, 260)); x.stroke(); }
+      }
+      // bouche hurlante
+      const mg = x.createRadialGradient(cx, cy + 150, 5, cx, cy + 150, 120); mg.addColorStop(0, '#000'); mg.addColorStop(0.8, '#120000'); mg.addColorStop(1, '#3a1010');
+      x.fillStyle = mg; x.beginPath(); x.ellipse(cx, cy + 150, 72, 118, 0, 0, 7); x.fill();
+      x.fillStyle = '#c8c4a8'; for (let k = 0; k < 9; k++) { const tx = cx - 56 + k * 14; x.beginPath(); x.moveTo(tx, cy + 58 + Math.abs(k - 4) * 5); x.lineTo(tx + 6, cy + 86 + R(0, 12)); x.lineTo(tx + 12, cy + 58 + Math.abs(k - 4) * 5); x.fill(); }
+      // cheveux mouillés
+      x.strokeStyle = '#050505';
+      for (let k = 0; k < 160; k++) { x.lineWidth = R(2, 9); x.beginPath(); const side = k % 3; let px = side === 0 ? cx - R(120, 260) : side === 1 ? cx + R(120, 260) : cx + R(-150, 150); let py = cy - R(200, 300); x.moveTo(px, py); const len = side === 2 ? R(60, 230) : R(300, 600); x.bezierCurveTo(px + R(-30, 30), py + len * 0.3, px + R(-40, 40), py + len * 0.7, px + R(-50, 50), py + len); x.stroke(); }
+    } else {
+      // sac de toile
+      const g = x.createRadialGradient(cx, cy - 20, 30, cx, cy, 310);
+      g.addColorStop(0, '#9a8258'); g.addColorStop(0.7, '#5a4a30'); g.addColorStop(1, '#1a140a');
+      x.fillStyle = g; x.beginPath(); x.moveTo(cx - 200, cy - 240); x.bezierCurveTo(cx - 60, cy - 310, cx + 80, cy - 300, cx + 210, cy - 230); x.bezierCurveTo(cx + 260, cy, cx + 230, cy + 220, cx + 150, cy + 300); x.lineTo(cx - 160, cy + 300); x.bezierCurveTo(cx - 250, cy + 200, cx - 260, cy - 20, cx - 200, cy - 240); x.fill();
+      x.strokeStyle = 'rgba(0,0,0,0.22)'; x.lineWidth = 2;
+      for (let k = 0; k < W; k += 9) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + R(-6, 6), W); x.stroke(); x.beginPath(); x.moveTo(0, k); x.lineTo(W, k + R(-6, 6)); x.stroke(); }
+      // taches
+      for (let k = 0; k < 14; k++) { const bx = cx + R(-180, 180), by = cy + R(-200, 260), r = R(20, 70); const bg = x.createRadialGradient(bx, by, 0, bx, by, r); bg.addColorStop(0, 'rgba(70,5,5,0.75)'); bg.addColorStop(1, 'rgba(70,5,5,0)'); x.fillStyle = bg; x.fillRect(bx - r, by - r, 2 * r, 2 * r); }
+      // trous des yeux déchirés
+      for (const s of [-1, 1]) {
+        const ex = cx + s * 85, ey = cy - 60;
+        x.fillStyle = '#000'; x.beginPath(); for (let a = 0; a < 14; a++) { const an = a / 14 * Math.PI * 2, r = (a % 2 ? 62 : 44) + R(-8, 8); x.lineTo(ex + Math.cos(an) * r, ey + Math.sin(an) * r * 0.8); } x.fill();
+        x.fillStyle = '#e8e0c8'; x.beginPath(); x.arc(ex, ey, 20, 0, 7); x.fill();
+        x.strokeStyle = '#a01010'; x.lineWidth = 1.5; for (let k = 0; k < 9; k++) { x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + R(-20, 20), ey + R(-20, 20)); x.stroke(); }
+        x.fillStyle = '#000'; x.beginPath(); x.arc(ex - s * 3, ey + 2, 6, 0, 7); x.fill();
+      }
+      // bouche cousue qui se déchire
+      x.fillStyle = '#000'; x.beginPath(); x.moveTo(cx - 150, cy + 110); x.quadraticCurveTo(cx, cy + 60, cx + 150, cy + 110); x.quadraticCurveTo(cx, cy + 290, cx - 150, cy + 110); x.fill();
+      x.fillStyle = '#b8b090'; for (let k = 0; k < 11; k++) { const tx = cx - 120 + k * 22; x.fillRect(tx, cy + 96 + Math.abs(k - 5) * 3, 14, R(18, 34)); x.fillRect(tx + 4, cy + 200 - Math.abs(k - 5) * 9, 12, -R(14, 28)); }
+      x.strokeStyle = '#1a1208'; x.lineWidth = 5; for (let k = 0; k < 9; k++) { const tx = cx - 130 + k * 32; x.beginPath(); x.moveTo(tx, cy + 70 + R(-6, 6)); x.lineTo(tx + R(-10, 10), cy + 250 - Math.abs(k - 4) * 14); x.stroke(); }
+    }
+    // grain + vignette
+    const img = x.getImageData(0, 0, W, W), d = img.data;
+    for (let k = 0; k < d.length; k += 4) { const n = (Math.random() - 0.5) * 50; d[k] += n; d[k + 1] += n; d[k + 2] += n; }
+    x.putImageData(img, 0, 0);
+    const v = x.createRadialGradient(cx, cy, 180, cx, cy, 340); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, '#000');
+    x.fillStyle = v; x.fillRect(0, 0, W, W);
+    return c.toDataURL('image/jpeg', 0.85);
   }
 
   /* ---------------- Menus ---------------- */
@@ -71,13 +135,14 @@ const UI = (() => {
     $('#optVol').oninput = e => { S.vol = +e.target.value; G.applySettings(); };
     $('#optSens').oninput = e => { S.sens = +e.target.value; G.applySettings(); };
     $('#optShadows').onchange = e => { S.shadows = e.target.checked; G.applySettings(); };
+    $('#optScares').onchange = e => { S.scares = e.target.checked; G.applySettings(); };
     $('#optC1').onchange = e => { S.ctrl[0] = e.target.value; G.applySettings(); };
     $('#optC2').onchange = e => { S.ctrl[1] = e.target.value; G.applySettings(); };
     showMenu();
   }
   function fillOptions() {
     const S = G.settings;
-    $('#optBright').value = S.bright; $('#optVol').value = S.vol; $('#optSens').value = S.sens; $('#optShadows').checked = S.shadows;
+    $('#optBright').value = S.bright; $('#optVol').value = S.vol; $('#optSens').value = S.sens; $('#optShadows').checked = S.shadows; $('#optScares').checked = S.scares !== false;
     $('#optC1').value = S.ctrl[0]; $('#optC2').value = S.ctrl[1];
     drawCalib();
   }
@@ -191,7 +256,11 @@ const UI = (() => {
       // panneau (lecture / cadenas)
       if (p.ui) {
         h.panel.className = 'panel on ' + p.ui.type + (p.ui.shake > 0 ? ' shake' : '');
-        if (p.ui.type === 'note') setHTML(i, 'panel', h.panel, `<h2>${esc(p.ui.title)}</h2><div class="text">${esc(p.ui.text)}</div><div class="close"><span class="key">${esc(G.btnLabel(p, 'use'))}</span> Fermer</div>`);
+        if (p.ui.type === 'quiz') {
+          const u = p.ui;
+          const nav = settings().ctrl[i] === 'kbm' ? `${G.keyLabel('KeyW')} ${G.keyLabel('KeyS')} : choisir` : settings().ctrl[i] === 'kb2' ? '↑ ↓ : choisir' : 'Croix : choisir';
+          setHTML(i, 'panel', h.panel, `<h2>Serrure à énigme</h2><div class="desc">Une plaque de cuivre gravée d'une question. Quatre boutons.</div><div class="question">${esc(u.q)}</div><div class="choices">${u.choices.map((c, k) => `<div class="${k === u.sel ? 'cur' : ''}">${k === u.sel ? '▶ ' : ''}${esc(c)}</div>`).join('')}</div><div class="close">${esc(nav)}<br><span class="key">${esc(G.btnLabel(p, 'use'))}</span> Valider · <span class="key">${esc(G.btnLabel(p, 'cancel'))}</span> Annuler<br>Attention : une mauvaise réponse fait du bruit.</div>`);
+        } else if (p.ui.type === 'note') setHTML(i, 'panel', h.panel, `<h2>${esc(p.ui.title)}</h2><div class="text">${esc(p.ui.text)}</div><div class="close"><span class="key">${esc(G.btnLabel(p, 'use'))}</span> Fermer</div>`);
         else {
           const c = p.ui.cfg;
           const cols = c.dials.map((opts, k) => `<div class="col ${k === p.ui.col ? 'cur' : ''}">${c.labels ? `<small>${esc(c.labels[k])}</small>` : ''}<b>▲</b><span>${esc(opts[p.ui.vals[k]])}</span><b>▼</b></div>`).join('');
@@ -206,6 +275,16 @@ const UI = (() => {
       const needMouse = settings().ctrl[i] === 'kbm' && document.pointerLockElement === null;
       setText(i, 'hint', h.hint, needMouse ? 'Cliquez pour contrôler la vue à la souris' : '');
       h.cross.style.opacity = p.target && !p.ui ? 0.9 : 0.25;
+      // screamer
+      if (p.scare) {
+        const img = h.scare.firstChild; const src = FACES[p.scare.kind] || FACES.girl;
+        if (cache[i].scareK !== p.scare.kind) { cache[i].scareK = p.scare.kind; img.src = src; }
+        const k = 1 - p.scare.t;
+        h.scare.style.display = 'flex';
+        h.scare.style.opacity = p.scare.t < 0.2 ? p.scare.t / 0.2 : 1;
+        img.style.transform = `translate(${(Math.random() - 0.5) * 30}px, ${(Math.random() - 0.5) * 30}px) scale(${0.75 + Math.min(1, k * 5) * 0.55 + k * 0.5})`;
+        h.scare.style.background = Math.random() < 0.15 ? '#400' : '#000';
+      } else if (cache[i].scareK !== null) { h.scare.style.display = 'none'; cache[i].scareK = null; }
     });
   }
   function settings() { return G.settings; }
