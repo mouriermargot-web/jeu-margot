@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valcourt</title>
+<style>
+  :root { --ink: #d8cfbf; --dim: #8a8070; --blood: #8a1010; --paper: #d6cbb0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--ink); font-family: Georgia, 'Times New Roman', serif; overflow: hidden; user-select: none; }
+  #game canvas { display: block; }
+  #split { position: fixed; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: #000; z-index: 5; pointer-events: none; }
+  #grain { position: fixed; inset: 0; width: 100%; height: 100%; opacity: 0.045; mix-blend-mode: screen; pointer-events: none; z-index: 30; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; z-index: 6; background: linear-gradient(90deg, transparent 0, transparent 100%); }
+
+  /* ---------- HUD ---------- */
+  #hudroot { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+  .hud { position: absolute; top: 0; bottom: 0; width: 50%; overflow: hidden; }
+  .hud0 { left: 0; } .hud1 { right: 0; }
+  .hud::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.75) 100%); }
+  .pname { position: absolute; top: 12px; right: 16px; font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: var(--dim); }
+  .obj { position: absolute; top: 12px; left: 16px; max-width: 70%; font-size: 15px; line-height: 1.35; color: #e6dcc6; text-shadow: 0 0 6px #000, 0 0 2px #000; transition: opacity .8s; }
+  .obj.flash { animation: flash 1s ease-in-out 3; }
+  @keyframes flash { 50% { color: #fff; text-shadow: 0 0 12px rgba(255,220,160,.7); } }
+  .cross { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #fff; transition: opacity .2s; }
+  .prompt { position: absolute; left: 0; right: 0; top: 58%; text-align: center; font-size: 17px; text-shadow: 0 0 6px #000, 0 0 3px #000; padding: 0 20px; }
+  .key { display: inline-block; min-width: 26px; padding: 1px 7px; margin-right: 6px; border: 1px solid #b8ad98; border-radius: 4px; background: rgba(0,0,0,.6); font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #fff; }
+  .msg { position: absolute; left: 8%; right: 8%; bottom: 17%; text-align: center; font-size: 17px; line-height: 1.4; font-style: italic; color: #f0e8d8; text-shadow: 0 0 8px #000, 0 0 3px #000, 0 0 2px #000; transition: opacity .4s; }
+  .inv { position: absolute; left: 16px; bottom: 16px; font-size: 14px; color: var(--dim); text-shadow: 0 0 4px #000; }
+  .inv .sel { color: #f0e2c0; }
+  .inv .tip { font-size: 11px; margin-top: 4px; opacity: .7; font-family: Arial, sans-serif; }
+  .status { position: absolute; right: 16px; bottom: 16px; width: 170px; font-size: 12px; color: var(--dim); font-family: Arial, sans-serif; text-align: right; text-shadow: 0 0 4px #000; }
+  .bat { position: relative; height: 18px; border: 1px solid #554c40; background: rgba(0,0,0,.5); margin-bottom: 3px; }
+  .bat i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(220,200,150,.35); }
+  .bat.low i { background: rgba(200,60,40,.55); }
+  .bat span { position: relative; z-index: 1; line-height: 18px; padding-right: 5px; }
+  .stam { height: 3px; background: rgba(255,255,255,.08); margin-top: 6px; }
+  .stam i { display: block; height: 100%; background: rgba(230,220,200,.55); }
+  .crouch { margin-top: 4px; }
+  .holdbar { display: none; position: absolute; left: 30%; right: 30%; top: 64%; height: 6px; border: 1px solid #888; background: rgba(0,0,0,.6); }
+  .holdbar div { height: 100%; width: 0; background: #c9b48a; }
+  .slits { display: none; position: absolute; inset: 0; background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.97) 0 34px, rgba(0,0,0,.25) 34px 46px);
+      -webkit-mask: linear-gradient(90deg, #000 0 47%, transparent 47% 53%, #000 53%); }
+  .slits::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0 47%, rgba(0,0,0,.98) 47% 53%, transparent 53%), radial-gradient(ellipse at center, transparent 30%, #000 85%); }
+  .danger { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, transparent 35%, rgba(90,0,0,.55) 75%, rgba(40,0,0,.9) 100%); }
+  .fade { position: absolute; inset: 0; background: #000; opacity: 0; display: flex; align-items: center; justify-content: center; font-style: italic; font-size: 20px; color: #a99; }
+  .chapter { position: absolute; left: 0; right: 0; top: 30%; text-align: center; opacity: 0; text-shadow: 0 0 20px #000; }
+  .chapter div { font-size: 16px; letter-spacing: 6px; text-transform: uppercase; color: var(--dim); }
+  .chapter span { display: block; font-size: 38px; margin-top: 8px; color: #e8dcc4; }
+  .mousehint { position: absolute; left: 0; right: 0; top: 70%; text-align: center; font-family: Arial, sans-serif; font-size: 14px; color: #fff; text-shadow: 0 0 6px #000; }
+
+  .panel { display: none; position: absolute; left: 7%; right: 7%; top: 8%; max-height: 84%; overflow: hidden; padding: 26px 30px; pointer-events: none; }
+  .panel.on { display: block; }
+  .panel.note { background: var(--paper); color: #241c12; box-shadow: 0 0 60px #000, inset 0 0 80px rgba(90,60,20,.45); font-size: 17px; line-height: 1.55; }
+  .panel.note h2 { margin: 0 0 14px; font-size: 21px; font-style: italic; border-bottom: 1px solid rgba(60,40,20,.3); padding-bottom: 8px; }
+  .panel.note .text { white-space: pre-wrap; }
+  .panel.note .close { margin-top: 18px; font-size: 13px; color: #5a4a30; font-family: Arial, sans-serif; }
+  .panel.note .key { color: #fff; background: #3a2e20; }
+  .panel.dial { background: rgba(8,7,6,.94); border: 1px solid #3a342c; text-align: center; box-shadow: 0 0 60px #000; }
+  .panel.dial h2 { margin: 0 0 6px; font-weight: normal; letter-spacing: 2px; }
+  .panel.dial .desc { color: var(--dim); font-style: italic; margin-bottom: 18px; }
+  .panel.dial .dials { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .panel.dial .col { min-width: 62px; padding: 8px 6px; border: 1px solid #333; background: #12100d; display: flex; flex-direction: column; align-items: center; }
+  .panel.dial .col span { font-size: 26px; font-family: 'Courier New', monospace; font-weight: bold; padding: 6px 4px; color: #d8c8a0; }
+  .panel.dial .col b { font-size: 11px; color: #444; }
+  .panel.dial .col small { font-size: 11px; color: var(--dim); font-family: Arial, sans-serif; }
+  .panel.dial .col.cur { border-color: #c8a868; box-shadow: 0 0 12px rgba(200,168,104,.35); }
+  .panel.dial .col.cur b { color: #c8a868; }
+  .panel.dial .close { margin-top: 18px; font-size: 13px; font-family: Arial, sans-serif; color: var(--dim); line-height: 2; }
+  .panel.shake { animation: shake .4s; }
+  @keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+
+  /* ---------- Écrans ---------- */
+  .screen { display: none; position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.92); align-items: center; justify-content: safe center; flex-direction: column; text-align: center; padding: 20px; overflow-y: auto; }
+  .screen.on { display: flex; }
+  #menu { background: radial-gradient(ellipse at 50% 40%, #1a1410 0, #000 70%); }
+  h1 { font-size: 92px; font-weight: normal; letter-spacing: 22px; margin: 0 0 6px 22px; color: #cdbfa6; text-shadow: 0 0 30px rgba(140,20,10,.5); }
+  .subtitle { color: var(--dim); font-style: italic; margin-bottom: 44px; letter-spacing: 1px; }
+  button { font-family: Georgia, serif; font-size: 19px; color: var(--ink); background: transparent; border: 1px solid #3a322a; padding: 11px 28px; margin: 6px; min-width: 300px; cursor: pointer; letter-spacing: 1px; transition: all .2s; }
+  button:hover, button:focus { border-color: #9a7a4a; color: #fff; background: rgba(120,80,40,.12); outline: none; }
+  .warn { margin-top: 36px; max-width: 760px; pointer-events: none; font-size: 13px; color: #6a6050; font-family: Arial, sans-serif; line-height: 1.6; }
+  .cols { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; text-align: left; }
+  .cols h3 { color: #c8a868; font-weight: normal; letter-spacing: 2px; }
+  table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; }
+  td { padding: 4px 14px 4px 0; color: var(--dim); }
+  td:last-child { color: #eee; font-weight: bold; }
+  .tips { max-width: 820px; margin: 22px auto 10px; color: var(--dim); font-size: 14px; line-height: 1.6; text-align: left; font-family: Arial, sans-serif; }
+  .opt { display: grid; grid-template-columns: 220px 260px; gap: 14px 20px; align-items: center; text-align: left; font-family: Arial, sans-serif; font-size: 15px; margin-bottom: 20px; }
+  select, input[type=range] { width: 100%; }
+  select { background: #111; color: #ddd; border: 1px solid #444; padding: 6px; font-size: 14px; }
+  #calib { border: 1px solid #333; margin: 6px 0 18px; }
+  #intro { background: #000; cursor: pointer; }
+  #introText { max-width: 760px; font-size: 24px; line-height: 1.6; font-style: italic; }
+  #introText p { opacity: 0; animation: fadein 2s forwards; }
+  @keyframes fadein { to { opacity: 1; } }
+  .skip { position: absolute; bottom: 24px; color: #555; font-size: 13px; font-family: Arial, sans-serif; }
+  #gameover h2, #ending h2 { font-size: 46px; font-weight: normal; letter-spacing: 6px; color: #b33; margin: 0 0 20px; }
+  #ending h2 { color: #cdbfa6; }
+  #ending p.story { max-width: 720px; font-size: 20px; line-height: 1.6; font-style: italic; opacity: 0; animation: fadein 2.5s forwards; }
+  #endStats { color: var(--dim); font-family: Arial, sans-serif; margin: 24px 0; }
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="split"></div>
+<div id="hudroot"></div>
+<canvas id="grain"></canvas>
+
+<div class="screen" id="menu">
+  <h1>VALCOURT</h1>
+  <div class="subtitle">Un jeu d'horreur coopératif pour deux joueurs, sur un seul écran</div>
+  <button id="btnNew">Nouvelle partie</button>
+  <button id="btnContinue">Continuer</button>
+  <button id="btnControls">Commandes</button>
+  <button id="btnOptions">Options &amp; luminosité</button>
+  <div class="warn">Ce jeu contient des scènes angoissantes, l'évocation de meurtres et de séquestration. Déconseillé aux moins de 16 ans.<br>
+    Jouez dans le noir, au casque ou avec des enceintes stéréo : le son à gauche est celui de Léa (écran gauche), à droite celui de Sam.</div>
+</div>
+
+<div class="screen" id="controls">
+  <h2 style="font-weight:normal;letter-spacing:4px">COMMANDES</h2>
+  <div class="cols">
+    <div><h3>Léa — Joueur 1 (écran gauche)</h3><div id="ctrlP1"></div></div>
+    <div><h3>Sam — Joueur 2 (écran droit)</h3><div id="ctrlP2"></div></div>
+  </div>
+  <div class="tips">
+    <b>Manettes :</b> chaque joueur peut utiliser une manette (choix dans les Options). Stick gauche : se déplacer · stick droit : regarder · A : interagir · X : lampe · B : s'accroupir/annuler · Y : objet suivant · LB : donner · RB : courir · Start : pause.<br><br>
+    <b>Conseils :</b> parlez-vous ! Chacun voit des indices que l'autre n'a pas. Le Gardien voit les lampes allumées de loin et entend les pas de course.
+    S'il vous attrape, il vous enferme dans la cellule du sous-sol : forcez la porte, ou attendez que l'autre vienne vous ouvrir. S'il vous attrape tous les deux, c'est fini.
+    Les armoires sont des cachettes sûres... tant qu'il ne vous a pas vu y entrer. La partie se sauvegarde automatiquement à chaque chapitre et chaque minute.
+  </div>
+  <button class="back">Retour</button>
+</div>
+
+<div class="screen" id="options">
+  <h2 style="font-weight:normal;letter-spacing:4px">OPTIONS</h2>
+  <div>Réglez la luminosité pour que le texte soit <i>à peine</i> visible :</div>
+  <canvas id="calib" width="420" height="80"></canvas>
+  <div class="opt">
+    <label>Luminosité</label><input id="optBright" type="range" min="0.5" max="2.2" step="0.05">
+    <label>Volume</label><input id="optVol" type="range" min="0" max="1" step="0.05">
+    <label>Sensibilité de la vue</label><input id="optSens" type="range" min="0.3" max="2.5" step="0.05">
+    <label>Ombres dynamiques</label><input id="optShadows" type="checkbox">
+    <label>Contrôles de Léa (J1)</label>
+    <select id="optC1"><option value="kbm">Clavier gauche + souris</option><option value="kb2">Clavier droit (flèches)</option><option value="pad0">Manette 1</option><option value="pad1">Manette 2</option></select>
+    <label>Contrôles de Sam (J2)</label>
+    <select id="optC2"><option value="kb2">Clavier droit (flèches)</option><option value="kbm">Clavier gauche + souris</option><option value="pad0">Manette 1</option><option value="pad1">Manette 2</option></select>
+  </div>
+  <button class="back">Retour</button>
+</div>
+
+<div class="screen" id="pause">
+  <h2 style="font-weight:normal;letter-spacing:6px">PAUSE</h2>
+  <button id="btnResume">Reprendre</button>
+  <button id="btnSave">Sauvegarder</button>
+  <button id="btnPauseControls">Commandes</button>
+  <button id="btnPauseOptions">Options &amp; luminosité</button>
+  <button id="btnQuit">Sauvegarder et quitter</button>
+</div>
+
+<div class="screen" id="intro">
+  <div id="introText"></div>
+  <div class="skip">Cliquer ou Entrée pour passer</div>
+</div>
+
+<div class="screen" id="gameover">
+  <h2>IL VOUS A EUS</h2>
+  <p style="font-style:italic;color:#8a8070;max-width:600px">Deux nouveaux noms barrés sur la liste. Deux nouvelles photos dans la boîte.<br>La maison reste pleine.</p>
+  <button id="btnRetry">Reprendre au début du chapitre</button>
+  <button id="btnGOMenu">Menu principal</button>
+</div>
+
+<div class="screen" id="ending">
+  <h2>DEHORS</h2>
+  <p class="story">La barre de fer tombe dans un fracas. La porte s'ouvre sur la nuit, l'herbe trempée, l'odeur de la forêt.</p>
+  <p class="story">Vous courez sans vous retourner jusqu'à la route. Au loin, les phares d'une voiture.</p>
+  <p class="story">Derrière vous, à la lucarne du grenier, une lanterne s'allume. Et très doucement, porté par le vent, quelqu'un fredonne une berceuse.</p>
+  <p class="story">Trois jours plus tard, les gendarmes draineront l'étang du domaine Valcourt.</p>
+  <div id="endStats"></div>
+  <button id="btnEndMenu">Menu principal</button>
+</div>
+
+<script src="js/three.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/models.js"></script>
+<script src="js/world.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  window.addEventListener('load', () => {
+    try { G.init(); UI.init(); }
+    catch (e) { document.body.innerHTML = '<div style="color:#ccc;padding:40px;font-family:Arial">Impossible de démarrer le jeu (WebGL requis). Utilisez un navigateur récent (Chrome, Firefox, Edge).<br><br>' + e + '</div>'; console.error(e); }
+  });
+</script>
+</body>
+</html>
